@@ -58,7 +58,7 @@ const Index = () => {
 					<div className="aspect-video rounded-2xl overflow-hidden shadow-2xl hover-card-shadow">
 						<div className="w-full h-full bg-gradient-to-br from-primary/90 to-blue-600/90 flex items-center justify-center text-white">
 							<div className="text-center">
-								<p className="text-xl font-medium mb-4">Preview of AutoXPoster Dashboard</p>
+								<p className="text-xl font-medium mb-4">Preview of Chetak Dashboard</p>
 								<Button variant="outline" className="text-white border-white hover:bg-white/10">
 									Coming soon...
 								</Button>
@@ -81,7 +81,7 @@ const Index = () => {
 							Everything you need to automate your X content
 						</h2>
 						<p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-							From AI-powered content generation to scheduling, AutoXPoster handles all aspects of your X
+							From AI-powered content generation to scheduling, Chetak handles all aspects of your X
 							automation needs.
 						</p>
 					</div>
@@ -130,7 +130,7 @@ const Index = () => {
 					<h2 className="text-3xl sm:text-4xl font-bold mb-6">Ready to automate your X presence?</h2>
 					<p className="text-lg text-muted-foreground mb-8 max-w-2xl mx-auto">
 						Join thousands of content creators, marketers, and businesses who are saving time and boosting
-						their engagement with AutoXPoster.
+						their engagement with Chetak.
 					</p>
 					<Button size="lg" onClick={handleGetStarted} className="rounded-full px-8 py-6 font-medium text-lg">
 						Get Started for Free
@@ -143,9 +143,9 @@ const Index = () => {
 				<div className="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center">
 					<div className="mb-6 md:mb-0">
 						<p className="text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-primary to-blue-600">
-							AutoXPoster
+							Chetak
 						</p>
-						<p className="text-muted-foreground mt-2">© 2023 AutoXPoster. All rights reserved.</p>
+						<p className="text-muted-foreground mt-2">© 2025 Chetak. All rights reserved.</p>
 					</div>
 					<div className="flex space-x-6">
 						<a href="#" className="text-muted-foreground hover:text-primary transition-colors">

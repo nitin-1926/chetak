@@ -94,7 +94,7 @@ const Auth = () => {
 			<main className={`flex-1 flex items-center justify-center px-4 sm:px-6 py-24 ${animationClass}`}>
 				<Card className="w-full max-w-md shadow-lg hover-card-shadow">
 					<CardHeader>
-						<CardTitle className="text-2xl text-center">Welcome to AutoXPoster</CardTitle>
+						<CardTitle className="text-2xl text-center">Welcome to Chetak</CardTitle>
 						<CardDescription className="text-center">
 							Sign in or create an account to get started
 						</CardDescription>
