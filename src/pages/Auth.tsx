@@ -56,22 +56,22 @@ const Auth = () => {
 
 		try {
 			setIsLoading(true);
-			const data = await authAPI.login(username, password);
+			// const data = await authAPI.login(username, password);
 
-			// Store authentication data
-			localStorage.setItem('token', data.access_token);
-			localStorage.setItem(
-				'user',
-				JSON.stringify({
-					id: data.user_id,
-					username: data.username,
-				}),
-			);
+			// // Store authentication data
+			// localStorage.setItem('token', data.access_token);
+			// localStorage.setItem(
+			// 	'user',
+			// 	JSON.stringify({
+			// 		id: data.user_id,
+			// 		username: data.username,
+			// 	}),
+			// );
 
-			toast({
-				title: 'Welcome back!',
-				description: `You're now signed in as ${data.username}`,
-			});
+			// toast({
+			// 	title: 'Welcome back!',
+			// 	description: `You're now signed in as ${data.username}`,
+			// });
 
 			// Navigate to dashboard
 			navigate('/dashboard');

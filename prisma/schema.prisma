@@ -1,0 +1,85 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-py"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id                  String           @id @default(uuid())
+  email               String           @unique
+  name                String?
+  hashed_password     String
+  is_active           Boolean          @default(true)
+  twitter_access_token String?
+  twitter_access_token_secret String?
+  created_at          DateTime         @default(now())
+  updated_at          DateTime         @updatedAt
+  campaigns           Campaign[]
+}
+
+model Campaign {
+  id                String            @id @default(uuid())
+  title             String
+  description       String?
+  status            CampaignStatus    @default(draft)
+  posts_count       Int              @default(0)
+  created_at        DateTime          @default(now())
+  updated_at        DateTime          @updatedAt
+  user_id           String
+  user              User              @relation(fields: [user_id], references: [id])
+
+  // Schedule fields
+  frequency         String
+  start_date        DateTime
+  start_time        String
+  end_date          DateTime?
+  duration          String?
+  timezone          String            @default("UTC")
+  custom_days       String[]
+  custom_times      String[]
+
+  // Audience preference fields
+  interests         String[]
+  languages         String[]
+  locations         String[]
+  age_range         String?
+  gender            String[]
+
+  // Content template fields
+  content_template  String
+
+  posts             Post[]
+}
+
+model Post {
+  id            String      @id @default(uuid())
+  content       String
+  scheduled_for DateTime
+  status        PostStatus  @default(scheduled)
+  platform_data Json?
+  error         String?
+  created_at    DateTime    @default(now())
+  updated_at    DateTime    @updatedAt
+  campaign_id   String
+  campaign      Campaign    @relation(fields: [campaign_id], references: [id])
+}
+
+enum CampaignStatus {
+  draft
+  active
+  paused
+  completed
+}
+
+enum PostStatus {
+  scheduled
+  processing
+  published
+  failed
+} 
