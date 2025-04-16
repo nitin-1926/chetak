@@ -8,6 +8,7 @@ import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import Header from '@/components/Header';
 import { usePageTransition } from '@/utils/animations';
+import { authAPI, twitterAPI } from '@/lib/api';
 
 const Auth = () => {
 	const navigate = useNavigate();
@@ -18,59 +19,78 @@ const Auth = () => {
 	// Form state
 	const [email, setEmail] = useState('');
 	const [password, setPassword] = useState('');
-	const [name, setName] = useState('');
+	const [username, setUsername] = useState('');
 
-	const handleConnectX = () => {
-		toast({
-			title: 'X Authentication',
-			description: "This would connect to X's OAuth in a real implementation.",
-		});
+	const handleConnectX = async () => {
+		try {
+			setIsLoading(true);
+			// In a real app, this would be a URL that can handle the Twitter OAuth callback
+			const callbackUrl = `${window.location.origin}/twitter-callback`;
+			const response = await twitterAPI.getAuthUrl(callbackUrl);
 
-		// Simulate loading
-		setIsLoading(true);
-		setTimeout(() => {
+			// Redirect to Twitter for authentication
+			window.location.href = response.auth_url;
+		} catch (error) {
+			console.error('Twitter auth error:', error);
+			toast({
+				variant: 'destructive',
+				title: 'Authentication failed',
+				description: 'Could not connect to Twitter. Please try again.',
+			});
 			setIsLoading(false);
-			navigate('/dashboard');
-		}, 1500);
+		}
 	};
 
-	const handleManualAuth = (e: React.FormEvent) => {
+	const handleSignIn = async (e: React.FormEvent) => {
 		e.preventDefault();
 
-		// Simulate loading
-		setIsLoading(true);
-		setTimeout(() => {
-			setIsLoading(false);
-			navigate('/dashboard');
-		}, 1500);
-	};
-
-	const handleSignIn = (e: React.FormEvent) => {
-		e.preventDefault();
-
-		// In a real app, this would validate credentials
-		if (!email || !password) {
+		// Validate input
+		if (!username || !password) {
 			toast({
 				variant: 'destructive',
 				title: 'Invalid credentials',
-				description: 'Please enter both email and password.',
+				description: 'Please enter both username and password.',
 			});
 			return;
 		}
 
-		// Simulate loading
-		setIsLoading(true);
-		setTimeout(() => {
-			setIsLoading(false);
+		try {
+			setIsLoading(true);
+			const data = await authAPI.login(username, password);
+
+			// Store authentication data
+			localStorage.setItem('token', data.access_token);
+			localStorage.setItem(
+				'user',
+				JSON.stringify({
+					id: data.user_id,
+					username: data.username,
+				}),
+			);
+
+			toast({
+				title: 'Welcome back!',
+				description: `You're now signed in as ${data.username}`,
+			});
+
+			// Navigate to dashboard
 			navigate('/dashboard');
-		}, 1500);
+		} catch (error: unknown) {
+			console.error('Login error:', error);
+			toast({
+				variant: 'destructive',
+				title: 'Authentication failed',
+				description: error instanceof Error ? error.message : 'Invalid username or password',
+			});
+			setIsLoading(false);
+		}
 	};
 
-	const handleSignUp = (e: React.FormEvent) => {
+	const handleSignUp = async (e: React.FormEvent) => {
 		e.preventDefault();
 
-		// In a real app, this would validate and create account
-		if (!name || !email || !password) {
+		// Validate input
+		if (!username || !email || !password) {
 			toast({
 				variant: 'destructive',
 				title: 'Missing information',
@@ -79,12 +99,37 @@ const Auth = () => {
 			return;
 		}
 
-		// Simulate loading
-		setIsLoading(true);
-		setTimeout(() => {
-			setIsLoading(false);
+		try {
+			setIsLoading(true);
+			const data = await authAPI.register(username, email, password);
+
+			// Store authentication data
+			localStorage.setItem('token', data.access_token);
+			localStorage.setItem(
+				'user',
+				JSON.stringify({
+					id: data.user_id,
+					username: data.username,
+				}),
+			);
+
+			toast({
+				title: 'Account created!',
+				description: `Welcome to Chetak, ${data.username}!`,
+			});
+
+			// Navigate to dashboard
 			navigate('/dashboard');
-		}, 1500);
+		} catch (error: unknown) {
+			console.error('Registration error:', error);
+			toast({
+				variant: 'destructive',
+				title: 'Registration failed',
+				description:
+					error instanceof Error ? error.message : 'Could not create account. Try a different username or email.',
+			});
+			setIsLoading(false);
+		}
 	};
 
 	return (
@@ -110,13 +155,12 @@ const Auth = () => {
 							<form onSubmit={handleSignIn}>
 								<CardContent className="space-y-4">
 									<div className="space-y-2">
-										<Label htmlFor="email">Email</Label>
+										<Label htmlFor="username">Username</Label>
 										<Input
-											id="email"
-											type="email"
-											placeholder="your@email.com"
-											value={email}
-											onChange={e => setEmail(e.target.value)}
+											id="username"
+											placeholder="your_username"
+											value={username}
+											onChange={e => setUsername(e.target.value)}
 											required
 										/>
 									</div>
@@ -171,12 +215,12 @@ const Auth = () => {
 							<form onSubmit={handleSignUp}>
 								<CardContent className="space-y-4">
 									<div className="space-y-2">
-										<Label htmlFor="name">Name</Label>
+										<Label htmlFor="username-signup">Username</Label>
 										<Input
-											id="name"
-											placeholder="Your name"
-											value={name}
-											onChange={e => setName(e.target.value)}
+											id="username-signup"
+											placeholder="Choose a username"
+											value={username}
+											onChange={e => setUsername(e.target.value)}
 											required
 										/>
 									</div>
