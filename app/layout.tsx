@@ -1,10 +1,10 @@
 import type { Metadata } from 'next';
 import { Inter } from 'next/font/google';
 import React from 'react';
-import '../src/index.css';
-import { Toaster } from '../src/components/ui/toaster';
-import { Toaster as Sonner } from '../src/components/ui/sonner';
-import { TooltipProvider } from '../src/components/ui/tooltip';
+import '../styles/index.css';
+import { Toaster } from '../components/ui/toaster';
+import { Toaster as Sonner } from '../components/ui/sonner';
+import { TooltipProvider } from '../components/ui/tooltip';
 import { Providers } from './providers';
 
 const inter = Inter({ subsets: ['latin'], variable: '--font-sans' });

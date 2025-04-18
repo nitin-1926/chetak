@@ -1,6 +1,14 @@
-import React from 'react';
-import CreateCampaignComponent from '../../src/page-components/CreateCampaign';
+'use client';
+
+import React, { Suspense } from 'react';
+
+// Import the CreateCampaignContent component (will move content directly into this file)
+import CreateCampaignContent from './CreateCampaignContent';
 
 export default function CreateCampaignPage() {
-	return <CreateCampaignComponent />;
+	return (
+		<Suspense fallback={<p>Loading...</p>}>
+			<CreateCampaignContent />
+		</Suspense>
+	);
 }
