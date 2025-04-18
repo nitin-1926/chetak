@@ -1,5 +1,7 @@
-import React, { useState, useEffect } from 'react';
-import { useNavigate, useLocation } from 'react-router-dom';
+'use client';
+
+import React, { useState, useEffect, Suspense } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -87,9 +89,19 @@ const mockPreviews = [
 	"5G technology isn't just about faster downloads. It's the foundation for smart cities, autonomous vehicles, and the next wave of innovation.",
 ];
 
-const CreateCampaign = () => {
-	const navigate = useNavigate();
-	const location = useLocation();
+// Main component wrapper with Suspense
+const CreateCampaignWrapper = () => {
+	return (
+		<Suspense fallback={<p>Loading...</p>}>
+			<CreateCampaignContent />
+		</Suspense>
+	);
+};
+
+// Component content that uses useSearchParams
+const CreateCampaignContent = () => {
+	const router = useRouter();
+	const searchParams = useSearchParams();
 	const { toast } = useToast();
 	const { animationClass } = usePageTransition();
 
@@ -109,7 +121,7 @@ const CreateCampaign = () => {
 	const [hashtagInput, setHashtagInput] = useState('');
 	const [previewPosts, setPreviewPosts] = useState(mockPreviews);
 
-	const isEditMode = location.search.includes('edit=');
+	const isEditMode = searchParams.has('edit');
 
 	// Prefill form when in edit mode
 	useEffect(() => {
@@ -195,7 +207,7 @@ const CreateCampaign = () => {
 				: 'Your new campaign has been created and scheduled.',
 		});
 
-		setTimeout(() => navigate('/dashboard'), 1000);
+		setTimeout(() => router.push('/dashboard'), 1000);
 	};
 
 	const isFormValid = () => {
@@ -464,4 +476,4 @@ const CreateCampaign = () => {
 	);
 };
 
-export default CreateCampaign;
+export default CreateCampaignWrapper;

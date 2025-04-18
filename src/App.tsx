@@ -1,32 +1,24 @@
+'use client';
+
 import { Toaster } from '@/components/ui/toaster';
 import { Toaster as Sonner } from '@/components/ui/sonner';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { BrowserRouter, Routes, Route } from 'react-router-dom';
-import Index from './pages/Index';
-import NotFound from './pages/NotFound';
-import Dashboard from './pages/Dashboard';
-import CreateCampaign from './pages/CreateCampaign';
-import Auth from './pages/Auth';
+import React from 'react';
 
-const queryClient = new QueryClient();
+// Since we're using Next.js for routing now, we don't need the router here
+const App = ({ children }: { children?: React.ReactNode }) => {
+	const queryClient = new QueryClient();
 
-const App = () => (
-	<QueryClientProvider client={queryClient}>
-		<TooltipProvider>
-			<Toaster />
-			<Sonner />
-			<BrowserRouter>
-				<Routes>
-					<Route path="/" element={<Index />} />
-					<Route path="/dashboard" element={<Dashboard />} />
-					<Route path="/create" element={<CreateCampaign />} />
-					<Route path="/auth" element={<Auth />} />
-					<Route path="*" element={<NotFound />} />
-				</Routes>
-			</BrowserRouter>
-		</TooltipProvider>
-	</QueryClientProvider>
-);
+	return (
+		<QueryClientProvider client={queryClient}>
+			<TooltipProvider>
+				<Toaster />
+				<Sonner />
+				{children}
+			</TooltipProvider>
+		</QueryClientProvider>
+	);
+};
 
 export default App;

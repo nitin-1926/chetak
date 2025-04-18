@@ -1,5 +1,8 @@
+'use client';
+
 import React, { useState, useEffect } from 'react';
-import { Link, useLocation } from 'react-router-dom';
+import Link from 'next/link';
+import { usePathname } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Menu, X } from 'lucide-react';
 
@@ -17,7 +20,7 @@ const navigation: NavItem[] = [
 const Header = () => {
 	const [scrolled, setScrolled] = useState(false);
 	const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-	const location = useLocation();
+	const pathname = usePathname();
 
 	useEffect(() => {
 		const handleScroll = () => {
@@ -31,7 +34,7 @@ const Header = () => {
 	// Close mobile menu when changing routes
 	useEffect(() => {
 		setMobileMenuOpen(false);
-	}, [location.pathname]);
+	}, [pathname]);
 
 	return (
 		<header
@@ -44,7 +47,7 @@ const Header = () => {
 			<div className="container mx-auto px-4 sm:px-6 lg:px-8">
 				<div className="flex h-16 items-center justify-between">
 					<div className="flex items-center">
-						<Link to="/" className="flex items-center">
+						<Link href="/" className="flex items-center">
 							<span className="text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-primary to-blue-600">
 								Chetak
 							</span>
@@ -56,16 +59,16 @@ const Header = () => {
 						{navigation.map(item => (
 							<Link
 								key={item.name}
-								to={item.href}
+								href={item.href}
 								className={`text-sm font-medium transition-colors hover:text-primary ${
-									location.pathname === item.href ? 'text-primary' : 'text-foreground/80'
+									pathname === item.href ? 'text-primary' : 'text-foreground/80'
 								}`}
 							>
 								{item.name}
 							</Link>
 						))}
 						<div className="h-5 w-px bg-gray-200 dark:bg-gray-700" />
-						<Link to="/auth">
+						<Link href="/auth">
 							<Button variant="default" size="sm" className="rounded-full">
 								Sign In
 							</Button>
@@ -98,9 +101,9 @@ const Header = () => {
 					{navigation.map(item => (
 						<Link
 							key={item.name}
-							to={item.href}
+							href={item.href}
 							className={`block px-3 py-2 rounded-md text-base font-medium ${
-								location.pathname === item.href
+								pathname === item.href
 									? 'text-primary bg-gray-50 dark:bg-gray-800'
 									: 'text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800'
 							}`}
@@ -108,7 +111,7 @@ const Header = () => {
 							{item.name}
 						</Link>
 					))}
-					<Link to="/auth" className="block w-full mt-4">
+					<Link href="/auth" className="block w-full mt-4">
 						<Button variant="default" size="sm" className="w-full">
 							Sign In
 						</Button>

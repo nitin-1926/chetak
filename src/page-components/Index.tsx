@@ -1,18 +1,20 @@
+'use client';
+
 import React from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import Header from '@/components/Header';
 import { useInViewAnimation } from '@/utils/animations';
 import { ArrowRight, Calendar, Layers, RefreshCw } from 'lucide-react';
 
 const Index = () => {
-	const navigate = useNavigate();
+	const router = useRouter();
 	const [heroRef, heroInView] = useInViewAnimation();
 	const [featuresRef, featuresInView] = useInViewAnimation(0.1);
 	const [ctaRef, ctaInView] = useInViewAnimation(0.1);
 
 	const handleGetStarted = () => {
-		navigate('/auth');
+		router.push('/auth');
 	};
 
 	return (
@@ -46,7 +48,7 @@ const Index = () => {
 							variant="outline"
 							size="lg"
 							className="rounded-full px-6 font-medium"
-							onClick={() => navigate('/dashboard')}
+							onClick={() => router.push('/dashboard')}
 						>
 							View Demo
 						</Button>

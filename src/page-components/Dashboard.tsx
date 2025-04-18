@@ -1,5 +1,7 @@
+'use client';
+
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -56,14 +58,14 @@ const mockCampaigns = [
 ];
 
 const Dashboard = () => {
-	const navigate = useNavigate();
+	const router = useRouter();
 	const { toast } = useToast();
 	const { animationClass } = usePageTransition();
 	const [campaigns, setCampaigns] = useState(mockCampaigns);
 	const [selectedFilter, setSelectedFilter] = useState('all');
 
 	const handleCreateCampaign = () => {
-		navigate('/create');
+		router.push('/create');
 	};
 
 	const handleEditCampaign = (id: string) => {
@@ -71,7 +73,7 @@ const Dashboard = () => {
 			title: 'Edit Campaign',
 			description: `Editing campaign with ID: ${id}`,
 		});
-		navigate(`/create?edit=${id}`);
+		router.push(`/create?edit=${id}`);
 	};
 
 	const handleDeleteCampaign = (id: string) => {

@@ -1,5 +1,7 @@
+'use client';
+
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
@@ -11,7 +13,7 @@ import { usePageTransition } from '@/utils/animations';
 import { authAPI, twitterAPI } from '@/lib/api';
 
 const Auth = () => {
-	const navigate = useNavigate();
+	const router = useRouter();
 	const { toast } = useToast();
 	const { animationClass } = usePageTransition();
 	const [isLoading, setIsLoading] = useState(false);
@@ -74,7 +76,7 @@ const Auth = () => {
 			// });
 
 			// Navigate to dashboard
-			navigate('/dashboard');
+			router.push('/dashboard');
 		} catch (error: unknown) {
 			console.error('Login error:', error);
 			toast({
@@ -119,14 +121,16 @@ const Auth = () => {
 			});
 
 			// Navigate to dashboard
-			navigate('/dashboard');
+			router.push('/dashboard');
 		} catch (error: unknown) {
 			console.error('Registration error:', error);
 			toast({
 				variant: 'destructive',
 				title: 'Registration failed',
 				description:
-					error instanceof Error ? error.message : 'Could not create account. Try a different username or email.',
+					error instanceof Error
+						? error.message
+						: 'Could not create account. Try a different username or email.',
 			});
 			setIsLoading(false);
 		}
