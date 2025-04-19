@@ -16,8 +16,7 @@ model User {
   name                String?
   hashed_password     String
   is_active           Boolean          @default(true)
-  twitter_access_token String?
-  twitter_access_token_secret String?
+  integrations        Json?
   created_at          DateTime         @default(now())
   updated_at          DateTime         @updatedAt
   campaigns           Campaign[]
