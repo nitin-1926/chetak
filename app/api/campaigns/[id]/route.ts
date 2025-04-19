@@ -76,6 +76,13 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
 			return NextResponse.json({ error: 'Not authorized to update this campaign' }, { status: 403 });
 		}
 
+		// Import scheduler service here to avoid circular dependencies
+		const { schedulerService } = await import('@/lib/services/scheduler');
+
+		// Check if the campaign is being activated
+		const isActivating = existingCampaign.status !== 'active' && campaignData.status === 'active';
+		const isPausing = existingCampaign.status === 'active' && campaignData.status === 'paused';
+
 		// Update the campaign
 		const updatedCampaign = await prisma.campaign.update({
 			where: { id: campaignId },
@@ -99,6 +106,18 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
 				content_template: campaignData.contentTemplate,
 			},
 		});
+
+		// If the campaign is being activated, start the scheduler
+		if (isActivating) {
+			console.log(`Campaign ${campaignId} is being activated, starting scheduler`);
+			await schedulerService.createScheduledPosts(campaignId);
+		}
+
+		// If the campaign is being paused, stop the scheduler
+		if (isPausing) {
+			console.log(`Campaign ${campaignId} is being paused, stopping scheduler`);
+			await schedulerService.stopCampaign(campaignId);
+		}
 
 		return NextResponse.json(updatedCampaign);
 	} catch (error) {
