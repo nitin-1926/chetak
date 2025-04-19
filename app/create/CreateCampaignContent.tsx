@@ -105,7 +105,7 @@ const CreateCampaignContent = () => {
 
 	// Form state
 	const [activeTab, setActiveTab] = useState('theme');
-	const [campaignName, setCampaignName] = useState('');
+	const [campaignName, setCampaignName] = useState('Untitled');
 	const [campaignDescription, setCampaignDescription] = useState('');
 	const [selectedTheme, setSelectedTheme] = useState('');
 	const [customTheme, setCustomTheme] = useState('');
