@@ -10,7 +10,8 @@ import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import Header from '@/components/Header';
 import { usePageTransition } from '@/utils/animations';
-import { authAPI, twitterAPI } from '@/lib/api';
+import { signIn } from 'next-auth/react';
+import axios, { AxiosError } from 'axios';
 
 export default function AuthPage() {
 	const router = useRouter();
@@ -21,70 +22,49 @@ export default function AuthPage() {
 	// Form state
 	const [email, setEmail] = useState('');
 	const [password, setPassword] = useState('');
-	const [username, setUsername] = useState('');
-
-	const handleConnectX = async () => {
-		try {
-			setIsLoading(true);
-			// In a real app, this would be a URL that can handle the Twitter OAuth callback
-			const callbackUrl = `${window.location.origin}/twitter-callback`;
-			const response = await twitterAPI.getAuthUrl(callbackUrl);
-
-			// Redirect to Twitter for authentication
-			window.location.href = response.auth_url;
-		} catch (error) {
-			console.error('Twitter auth error:', error);
-			toast({
-				variant: 'destructive',
-				title: 'Authentication failed',
-				description: 'Could not connect to Twitter. Please try again.',
-			});
-			setIsLoading(false);
-		}
-	};
+	const [name, setName] = useState('');
 
 	const handleSignIn = async (e: React.FormEvent) => {
 		e.preventDefault();
 
 		// Validate input
-		if (!username || !password) {
+		if (!email || !password) {
 			toast({
 				variant: 'destructive',
 				title: 'Invalid credentials',
-				description: 'Please enter both username and password.',
+				description: 'Please enter both email and password.',
 			});
 			return;
 		}
 
 		try {
 			setIsLoading(true);
-			// const data = await authAPI.login(username, password);
+			const result = await signIn('credentials', {
+				email,
+				password,
+				redirect: false,
+			});
 
-			// // Store authentication data
-			// localStorage.setItem('token', data.access_token);
-			// localStorage.setItem(
-			// 	'user',
-			// 	JSON.stringify({
-			// 		id: data.user_id,
-			// 		username: data.username,
-			// 	}),
-			// );
+			if (result?.error) {
+				throw new Error(result.error);
+			}
 
-			// toast({
-			// 	title: 'Welcome back!',
-			// 	description: `You're now signed in as ${data.username}`,
-			// });
+			toast({
+				title: 'Welcome back!',
+				description: 'You have signed in successfully',
+			});
 
 			// Navigate to dashboard
 			router.push('/dashboard');
+			router.refresh();
 		} catch (error: unknown) {
 			console.error('Login error:', error);
+			setIsLoading(false);
 			toast({
 				variant: 'destructive',
 				title: 'Authentication failed',
-				description: error instanceof Error ? error.message : 'Invalid username or password',
+				description: error instanceof Error ? error.message : 'Invalid email or password',
 			});
-			setIsLoading(false);
 		}
 	};
 
@@ -92,7 +72,7 @@ export default function AuthPage() {
 		e.preventDefault();
 
 		// Validate input
-		if (!username || !email || !password) {
+		if (!name || !email || !password) {
 			toast({
 				variant: 'destructive',
 				title: 'Missing information',
@@ -103,36 +83,55 @@ export default function AuthPage() {
 
 		try {
 			setIsLoading(true);
-			const data = await authAPI.register(username, email, password);
 
-			// Store authentication data
-			localStorage.setItem('token', data.access_token);
-			localStorage.setItem(
-				'user',
-				JSON.stringify({
-					id: data.user_id,
-					username: data.username,
-				}),
-			);
+			// Register user
+			const response = await axios.post('/api/register', {
+				name,
+				email,
+				password,
+			});
+
+			// Sign in the user after registration
+			const result = await signIn('credentials', {
+				email,
+				password,
+				redirect: false,
+			});
+
+			if (result?.error) {
+				throw new Error(result.error);
+			}
 
 			toast({
 				title: 'Account created!',
-				description: `Welcome to Chetak, ${data.username}!`,
+				description: `Welcome to Chetak, ${name}!`,
 			});
 
 			// Navigate to dashboard
 			router.push('/dashboard');
+			router.refresh();
 		} catch (error: unknown) {
 			console.error('Registration error:', error);
+			setIsLoading(false);
+
+			let errorMessage = 'Could not create account. Try a different email.';
+
+			if (error instanceof AxiosError && error.response) {
+				errorMessage = error.response.data.message || error.response.data.error || errorMessage;
+
+				// Handle 409 conflict (user already exists)
+				if (error.response.status === 409) {
+					errorMessage = 'User with this email already exists. Try signing in instead.';
+				}
+			} else if (error instanceof Error) {
+				errorMessage = error.message;
+			}
+
 			toast({
 				variant: 'destructive',
 				title: 'Registration failed',
-				description:
-					error instanceof Error
-						? error.message
-						: 'Could not create account. Try a different username or email.',
+				description: errorMessage,
 			});
-			setIsLoading(false);
 		}
 	};
 
@@ -159,12 +158,13 @@ export default function AuthPage() {
 							<form onSubmit={handleSignIn}>
 								<CardContent className="space-y-4">
 									<div className="space-y-2">
-										<Label htmlFor="username">Username</Label>
+										<Label htmlFor="email">Email</Label>
 										<Input
-											id="username"
-											placeholder="your_username"
-											value={username}
-											onChange={e => setUsername(e.target.value)}
+											id="email"
+											type="email"
+											placeholder="your.email@example.com"
+											value={email}
+											onChange={e => setEmail(e.target.value)}
 											required
 										/>
 									</div>
@@ -192,25 +192,6 @@ export default function AuthPage() {
 									<Button type="submit" className="w-full" disabled={isLoading}>
 										{isLoading ? 'Signing in...' : 'Sign In'}
 									</Button>
-
-									<div className="relative w-full flex items-center justify-center">
-										<div className="absolute inset-0 flex items-center">
-											<div className="w-full border-t border-gray-200 dark:border-gray-700" />
-										</div>
-										<div className="relative px-4 text-sm bg-card">
-											<span className="text-muted-foreground">or</span>
-										</div>
-									</div>
-
-									<Button
-										type="button"
-										variant="outline"
-										className="w-full"
-										onClick={handleConnectX}
-										disabled={isLoading}
-									>
-										Connect with X
-									</Button>
 								</CardFooter>
 							</form>
 						</TabsContent>
@@ -219,9 +200,19 @@ export default function AuthPage() {
 							<form onSubmit={handleSignUp}>
 								<CardContent className="space-y-4">
 									<div className="space-y-2">
-										<Label htmlFor="email">Email</Label>
+										<Label htmlFor="name">Name</Label>
 										<Input
-											id="email"
+											id="name"
+											placeholder="Your Name"
+											value={name}
+											onChange={e => setName(e.target.value)}
+											required
+										/>
+									</div>
+									<div className="space-y-2">
+										<Label htmlFor="signup-email">Email</Label>
+										<Input
+											id="signup-email"
 											type="email"
 											placeholder="your.email@example.com"
 											value={email}
@@ -230,56 +221,21 @@ export default function AuthPage() {
 										/>
 									</div>
 									<div className="space-y-2">
-										<Label htmlFor="signup-username">Username</Label>
-										<Input
-											id="signup-username"
-											placeholder="your_username"
-											value={username}
-											onChange={e => setUsername(e.target.value)}
-											required
-										/>
-									</div>
-									<div className="space-y-2">
 										<Label htmlFor="signup-password">Password</Label>
 										<Input
 											id="signup-password"
 											type="password"
+											placeholder="Create a secure password"
 											value={password}
 											onChange={e => setPassword(e.target.value)}
 											required
 										/>
-										<p className="text-xs text-muted-foreground mt-1">
-											Password must be at least 8 characters long
-										</p>
 									</div>
 								</CardContent>
 								<CardFooter className="flex flex-col space-y-4">
 									<Button type="submit" className="w-full" disabled={isLoading}>
-										{isLoading ? 'Creating account...' : 'Create Account'}
+										{isLoading ? 'Creating Account...' : 'Create Account'}
 									</Button>
-
-									<div className="relative w-full flex items-center justify-center">
-										<div className="absolute inset-0 flex items-center">
-											<div className="w-full border-t border-gray-200 dark:border-gray-700" />
-										</div>
-										<div className="relative px-4 text-sm bg-card">
-											<span className="text-muted-foreground">or</span>
-										</div>
-									</div>
-
-									<Button
-										type="button"
-										variant="outline"
-										className="w-full"
-										onClick={handleConnectX}
-										disabled={isLoading}
-									>
-										Connect with X
-									</Button>
-
-									<p className="text-xs text-center text-muted-foreground mt-4">
-										By creating an account, you agree to our Terms of Service and Privacy Policy
-									</p>
 								</CardFooter>
 							</form>
 						</TabsContent>

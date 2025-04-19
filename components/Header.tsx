@@ -5,6 +5,8 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Menu, X } from 'lucide-react';
+import { useSession } from 'next-auth/react';
+import SignOutButton from './SignOutButton';
 
 interface NavItem {
 	name: string;
@@ -21,6 +23,7 @@ const Header = () => {
 	const [scrolled, setScrolled] = useState(false);
 	const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 	const pathname = usePathname();
+	const { data: session } = useSession();
 
 	useEffect(() => {
 		const handleScroll = () => {
@@ -68,11 +71,20 @@ const Header = () => {
 							</Link>
 						))}
 						<div className="h-5 w-px bg-gray-200 dark:bg-gray-700" />
-						<Link href="/auth">
-							<Button variant="default" size="sm" className="rounded-full">
-								Sign In
-							</Button>
-						</Link>
+						{session ? (
+							<div className="flex items-center gap-4">
+								<span className="text-sm font-medium text-foreground/80">
+									{session.user.name || session.user.email}
+								</span>
+								<SignOutButton variant="outline" />
+							</div>
+						) : (
+							<Link href="/auth">
+								<Button variant="default" size="sm" className="rounded-full">
+									Sign In
+								</Button>
+							</Link>
+						)}
 					</nav>
 
 					{/* Mobile menu button */}
@@ -111,11 +123,20 @@ const Header = () => {
 							{item.name}
 						</Link>
 					))}
-					<Link href="/auth" className="block w-full mt-4">
-						<Button variant="default" size="sm" className="w-full">
-							Sign In
-						</Button>
-					</Link>
+					{session ? (
+						<div className="flex flex-col gap-2 mt-4">
+							<div className="px-3 py-2 text-sm font-medium text-foreground/80">
+								Signed in as {session.user.name || session.user.email}
+							</div>
+							<SignOutButton variant="default" className="w-full" />
+						</div>
+					) : (
+						<Link href="/auth" className="block w-full mt-4">
+							<Button variant="default" size="sm" className="w-full">
+								Sign In
+							</Button>
+						</Link>
+					)}
 				</div>
 			</div>
 		</header>
