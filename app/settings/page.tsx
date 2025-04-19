@@ -15,8 +15,10 @@ import { Separator } from '@/components/ui/separator';
 import axios, { AxiosError } from 'axios';
 
 type TwitterCredentials = {
-	access_token: string;
-	access_token_secret: string;
+	api_key?: string;
+	api_secret?: string;
+	access_token?: string;
+	access_token_secret?: string;
 	connected_at: string;
 };
 
@@ -36,6 +38,8 @@ const SettingsPage = () => {
 	const [confirmPassword, setConfirmPassword] = useState('');
 
 	// Twitter integration state
+	const [twitterApiKey, setTwitterApiKey] = useState('');
+	const [twitterApiSecret, setTwitterApiSecret] = useState('');
 	const [twitterAccessToken, setTwitterAccessToken] = useState('');
 	const [twitterAccessSecret, setTwitterAccessSecret] = useState('');
 	const [twitterConnected, setTwitterConnected] = useState(false);
@@ -54,11 +58,24 @@ const SettingsPage = () => {
 			if (data.connected) {
 				setTwitterConnected(true);
 				setTwitterCredentials(data.twitter);
+
+				// Set values for display (masked values)
+				if (data.twitter.api_key) setTwitterApiKey(data.twitter.api_key);
+				if (data.twitter.api_secret) setTwitterApiSecret(data.twitter.api_secret);
+				if (data.twitter.access_token) setTwitterAccessToken(data.twitter.access_token);
+				if (data.twitter.access_token_secret) setTwitterAccessSecret(data.twitter.access_token_secret);
+
 				setTwitterConnectionDate(new Date(data.twitter.connected_at).toLocaleDateString());
 			} else {
 				setTwitterConnected(false);
 				setTwitterCredentials(null);
 				setTwitterConnectionDate(null);
+
+				// Clear fields
+				setTwitterApiKey('');
+				setTwitterApiSecret('');
+				setTwitterAccessToken('');
+				setTwitterAccessSecret('');
 			}
 		} catch (error) {
 			console.error('Error fetching Twitter credentials:', error);
@@ -210,12 +227,19 @@ const SettingsPage = () => {
 
 		try {
 			// Validate inputs
-			if (!twitterAccessToken.trim() || !twitterAccessSecret.trim()) {
-				throw new Error('Both Access Token and Access Secret are required');
+			if (
+				!twitterApiKey.trim() ||
+				!twitterApiSecret.trim() ||
+				!twitterAccessToken.trim() ||
+				!twitterAccessSecret.trim()
+			) {
+				throw new Error('All Twitter credentials are required');
 			}
 
 			// Call API to update Twitter credentials
 			const response = await axios.put('/api/user/twitter', {
+				apiKey: twitterApiKey,
+				apiSecret: twitterApiSecret,
 				accessToken: twitterAccessToken,
 				accessSecret: twitterAccessSecret,
 			});
@@ -509,6 +533,30 @@ const SettingsPage = () => {
 
 										<form onSubmit={handleTwitterIntegration} className="space-y-4">
 											<div className="space-y-2">
+												<Label htmlFor="twitter-api-key">Twitter API Key (Consumer Key)</Label>
+												<Input
+													id="twitter-api-key"
+													value={twitterApiKey}
+													onChange={e => setTwitterApiKey(e.target.value)}
+													placeholder="Enter your Twitter API Key"
+													required
+													disabled={isSubmitting}
+												/>
+											</div>
+											<div className="space-y-2">
+												<Label htmlFor="twitter-api-secret">
+													Twitter API Secret (Consumer Secret)
+												</Label>
+												<Input
+													id="twitter-api-secret"
+													value={twitterApiSecret}
+													onChange={e => setTwitterApiSecret(e.target.value)}
+													placeholder="Enter your Twitter API Secret"
+													required
+													disabled={isSubmitting}
+												/>
+											</div>
+											<div className="space-y-2">
 												<Label htmlFor="twitter-access-token">Twitter Access Token</Label>
 												<Input
 													id="twitter-access-token"
@@ -550,10 +598,11 @@ const SettingsPage = () => {
 										<div className="text-sm text-muted-foreground">
 											<p className="mb-2">How to get your Twitter API credentials:</p>
 											<ol className="list-decimal pl-4 space-y-1">
-												<li>Go to the Twitter Developer Portal</li>
-												<li>Create a new Project and App</li>
+												<li>Go to the Twitter Developer Portal (developer.twitter.com)</li>
+												<li>Create a new Project and App with OAuth 1.0a authentication</li>
 												<li>Navigate to Keys and Tokens section</li>
-												<li>Generate Access Token and Secret</li>
+												<li>Copy the API Key and Secret (Consumer Key and Secret)</li>
+												<li>Generate Access Token and Secret for your account</li>
 											</ol>
 										</div>
 									</CardContent>
