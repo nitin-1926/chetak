@@ -57,6 +57,12 @@ const THEME_OPTIONS: Theme[] = [
 // Frequency options defined outside component
 const FREQUENCY_OPTIONS: ScheduleOption[] = [
 	{
+		id: 'every_2_minutes',
+		label: 'Every 2 Minutes (Testing)',
+		value: 'every_2_minutes',
+		description: 'Post content every 2 minutes (for testing purposes only).',
+	},
+	{
 		id: 'hourly',
 		label: 'Hourly',
 		value: '1h',
