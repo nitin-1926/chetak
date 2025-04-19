@@ -1,299 +1,268 @@
 'use client';
 
-import React, { useState } from 'react';
-import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import * as z from 'zod';
+import { useState, useEffect } from 'react';
 import Header from '@/components/Header';
 import { usePageTransition } from '@/utils/animations';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
+import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
-import { Switch } from '@/components/ui/switch';
+import { useToast } from '@/hooks/use-toast';
+import { User, Settings, Twitter } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { toast } from 'sonner';
-
-const accountFormSchema = z.object({
-	name: z.string().min(2, {
-		message: 'Name must be at least 2 characters.',
-	}),
-	email: z.string().email({
-		message: 'Please enter a valid email address.',
-	}),
-});
-
-const notificationsFormSchema = z.object({
-	emailNotifications: z.boolean().default(true),
-	marketingEmails: z.boolean().default(false),
-	newCampaignResults: z.boolean().default(true),
-	accountAlerts: z.boolean().default(true),
-});
-
-type AccountFormValues = z.infer<typeof accountFormSchema>;
-type NotificationsFormValues = z.infer<typeof notificationsFormSchema>;
 
 const SettingsPage = () => {
 	const { animationClass } = usePageTransition();
+	const { toast } = useToast();
 	const [avatar, setAvatar] = useState('/avatars/placeholder.png');
 
-	// Account form
-	const accountForm = useForm<AccountFormValues>({
-		resolver: zodResolver(accountFormSchema),
-		defaultValues: {
-			name: 'Jane Smith',
-			email: 'jane.smith@example.com',
-		},
-	});
+	// Profile settings state
+	const [name, setName] = useState('');
+	const [email, setEmail] = useState('');
+	const [currentPassword, setCurrentPassword] = useState('');
+	const [newPassword, setNewPassword] = useState('');
+	const [confirmPassword, setConfirmPassword] = useState('');
 
-	// Notifications form
-	const notificationsForm = useForm<NotificationsFormValues>({
-		resolver: zodResolver(notificationsFormSchema),
-		defaultValues: {
-			emailNotifications: true,
-			marketingEmails: false,
-			newCampaignResults: true,
-			accountAlerts: true,
-		},
-	});
+	// Twitter integration state
+	const [twitterAccessToken, setTwitterAccessToken] = useState('');
+	const [twitterAccessSecret, setTwitterAccessSecret] = useState('');
+	const [twitterConnected, setTwitterConnected] = useState(false);
 
-	function onAccountSubmit(data: AccountFormValues) {
-		toast.success('Account settings updated');
-		console.log(data);
-	}
+	useEffect(() => {
+		// Mock fetch user data
+		// In a real app, you would fetch from your API
+		setTimeout(() => {
+			setName('John Doe');
+			setEmail('john.doe@example.com');
+		}, 500);
+	}, []);
 
-	function onNotificationsSubmit(data: NotificationsFormValues) {
-		toast.success('Notification preferences updated');
-		console.log(data);
-	}
+	const handleProfileUpdate = e => {
+		e.preventDefault();
+
+		// Here you would call your API to update the profile
+		toast({
+			title: 'Profile Updated',
+			description: 'Your profile information has been updated successfully.',
+		});
+	};
+
+	const handlePasswordUpdate = e => {
+		e.preventDefault();
+
+		if (newPassword !== confirmPassword) {
+			toast({
+				title: "Passwords Don't Match",
+				description: 'New password and confirm password must match.',
+				variant: 'destructive',
+			});
+			return;
+		}
+
+		// Here you would call your API to update the password
+		setCurrentPassword('');
+		setNewPassword('');
+		setConfirmPassword('');
+
+		toast({
+			title: 'Password Updated',
+			description: 'Your password has been updated successfully.',
+		});
+	};
+
+	const handleTwitterIntegration = e => {
+		e.preventDefault();
+
+		// Here you would validate and save Twitter credentials
+		setTwitterConnected(true);
+
+		toast({
+			title: 'Twitter Connected',
+			description: 'Your Twitter account has been connected successfully.',
+		});
+	};
+
+	const handleDisconnectTwitter = () => {
+		setTwitterConnected(false);
+		setTwitterAccessToken('');
+		setTwitterAccessSecret('');
+
+		toast({
+			title: 'Twitter Disconnected',
+			description: 'Your Twitter account has been disconnected successfully.',
+		});
+	};
 
 	return (
 		<div className="min-h-screen flex flex-col">
 			<Header />
-
 			<main className={`flex-1 pt-24 pb-12 px-4 sm:px-6 lg:px-8 ${animationClass}`}>
 				<div className="max-w-4xl mx-auto">
 					<div className="mb-8">
 						<h1 className="text-3xl font-bold">Settings</h1>
-						<p className="text-muted-foreground mt-1">Manage your account settings and preferences</p>
+						<p className="text-muted-foreground mt-1">
+							Manage your account settings and set up external connections
+						</p>
 					</div>
 
-					<Tabs defaultValue="account" className="mb-8">
-						<TabsList className="mb-4">
-							<TabsTrigger value="account">Account</TabsTrigger>
-							<TabsTrigger value="notifications">Notifications</TabsTrigger>
+					<Tabs defaultValue="profile" className="mb-8">
+						<TabsList className="mb-6">
+							<TabsTrigger value="profile" className="flex items-center gap-1">
+								<User className="h-4 w-4" />
+								<span>Profile</span>
+							</TabsTrigger>
+							<TabsTrigger value="integrations" className="flex items-center gap-1">
+								<Settings className="h-4 w-4" />
+								<span>Integrations</span>
+							</TabsTrigger>
 						</TabsList>
 
-						<TabsContent value="account">
-							<Card>
-								<CardHeader>
-									<CardTitle>Account Information</CardTitle>
-									<CardDescription>
-										Update your account details and personal information
-									</CardDescription>
-								</CardHeader>
-								<CardContent>
-									<div className="flex items-center mb-6">
-										<Avatar className="w-16 h-16 mr-4">
-											<AvatarImage src={avatar} alt="Avatar" />
-											<AvatarFallback>JS</AvatarFallback>
-										</Avatar>
-										<Button variant="outline" size="sm">
-											Change Avatar
-										</Button>
-									</div>
+						<TabsContent value="profile">
+							<div className="space-y-6">
+								<Card>
+									<CardHeader>
+										<CardTitle>Profile Information</CardTitle>
+										<CardDescription>Update your account information</CardDescription>
+									</CardHeader>
+									<CardContent>
+										<form onSubmit={handleProfileUpdate} className="space-y-4">
+											<div className="space-y-2">
+												<Label htmlFor="name">Name</Label>
+												<Input
+													id="name"
+													value={name}
+													onChange={e => setName(e.target.value)}
+													placeholder="Your name"
+												/>
+											</div>
+											<div className="space-y-2">
+												<Label htmlFor="email">Email</Label>
+												<Input
+													id="email"
+													type="email"
+													value={email}
+													onChange={e => setEmail(e.target.value)}
+													placeholder="your.email@example.com"
+												/>
+											</div>
+											<Button type="submit">Update Profile</Button>
+										</form>
+									</CardContent>
+								</Card>
 
-									<Form {...accountForm}>
-										<form
-											onSubmit={accountForm.handleSubmit(onAccountSubmit)}
-											className="space-y-6"
-										>
-											<FormField
-												control={accountForm.control}
-												name="name"
-												render={({ field }) => (
-													<FormItem>
-														<FormLabel>Name</FormLabel>
-														<FormControl>
-															<Input placeholder="Your name" {...field} />
-														</FormControl>
-														<FormMessage />
-													</FormItem>
-												)}
-											/>
+								<Card>
+									<CardHeader>
+										<CardTitle>Change Password</CardTitle>
+										<CardDescription>Update your password to maintain security</CardDescription>
+									</CardHeader>
+									<CardContent>
+										<form onSubmit={handlePasswordUpdate} className="space-y-4">
+											<div className="space-y-2">
+												<Label htmlFor="current-password">Current Password</Label>
+												<Input
+													id="current-password"
+													type="password"
+													value={currentPassword}
+													onChange={e => setCurrentPassword(e.target.value)}
+													placeholder="••••••••"
+													required
+												/>
+											</div>
+											<div className="space-y-2">
+												<Label htmlFor="new-password">New Password</Label>
+												<Input
+													id="new-password"
+													type="password"
+													value={newPassword}
+													onChange={e => setNewPassword(e.target.value)}
+													placeholder="••••••••"
+													required
+												/>
+											</div>
+											<div className="space-y-2">
+												<Label htmlFor="confirm-password">Confirm New Password</Label>
+												<Input
+													id="confirm-password"
+													type="password"
+													value={confirmPassword}
+													onChange={e => setConfirmPassword(e.target.value)}
+													placeholder="••••••••"
+													required
+												/>
+											</div>
+											<Button type="submit">Update Password</Button>
+										</form>
+									</CardContent>
+								</Card>
+							</div>
+						</TabsContent>
 
-											<FormField
-												control={accountForm.control}
-												name="email"
-												render={({ field }) => (
-													<FormItem>
-														<FormLabel>Email</FormLabel>
-														<FormControl>
-															<Input placeholder="Your email" {...field} />
-														</FormControl>
-														<FormMessage />
-													</FormItem>
-												)}
-											/>
-
-											<Separator className="my-6" />
-
-											<div className="flex flex-col space-y-4">
-												<div>
-													<h3 className="text-lg font-medium">Connected Accounts</h3>
-													<p className="text-sm text-muted-foreground">
-														Manage your connected social media accounts
-													</p>
-												</div>
-
-												<div className="flex items-center justify-between py-2">
-													<div className="flex items-center">
-														<div className="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center mr-3">
-															<svg
-																xmlns="http://www.w3.org/2000/svg"
-																width="20"
-																height="20"
-																viewBox="0 0 24 24"
-																fill="none"
-																stroke="currentColor"
-																strokeWidth="2"
-																strokeLinecap="round"
-																strokeLinejoin="round"
-															>
-																<path d="M22 4s-.7 2.1-2 3.4c1.6 10-9.4 17.3-18 11.6 2.2.1 4.4-.6 6-2C3 15.5.5 9.6 3 5c2.2 2.6 5.6 4.1 9 4-.9-4.2 4-6.6 7-3.8 1.1 0 3-1.2 3-1.2z"></path>
-															</svg>
-														</div>
-														<div>
-															<p className="font-medium">X (Twitter)</p>
-															<p className="text-sm text-muted-foreground">@janesmith</p>
-														</div>
+						<TabsContent value="integrations">
+							<div className="space-y-6">
+								<Card>
+									<CardHeader>
+										<CardTitle className="flex items-center gap-2">
+											<Twitter className="h-5 w-5" />
+											Twitter Integration
+										</CardTitle>
+										<CardDescription>Connect your Twitter account to post content</CardDescription>
+									</CardHeader>
+									<CardContent>
+										{twitterConnected ? (
+											<div className="space-y-4">
+												<div className="p-4 rounded-md bg-muted flex items-center justify-between">
+													<div>
+														<p className="font-medium">Twitter Connected</p>
+														<p className="text-sm text-muted-foreground">
+															Your Twitter account is connected
+														</p>
 													</div>
-													<Button variant="outline" size="sm">
+													<Button variant="destructive" onClick={handleDisconnectTwitter}>
 														Disconnect
 													</Button>
 												</div>
 											</div>
-
-											<div className="flex justify-end">
-												<Button type="submit">Save Changes</Button>
-											</div>
-										</form>
-									</Form>
-								</CardContent>
-							</Card>
-						</TabsContent>
-
-						<TabsContent value="notifications">
-							<Card>
-								<CardHeader>
-									<CardTitle>Notification Preferences</CardTitle>
-									<CardDescription>Customize how and when you receive notifications</CardDescription>
-								</CardHeader>
-								<CardContent>
-									<Form {...notificationsForm}>
-										<form
-											onSubmit={notificationsForm.handleSubmit(onNotificationsSubmit)}
-											className="space-y-6"
-										>
-											<FormField
-												control={notificationsForm.control}
-												name="emailNotifications"
-												render={({ field }) => (
-													<FormItem className="flex flex-row items-center justify-between p-3 rounded-lg border">
-														<div className="space-y-0.5">
-															<FormLabel className="text-base">
-																Email Notifications
-															</FormLabel>
-															<FormDescription>
-																Receive emails for important updates and notifications
-															</FormDescription>
-														</div>
-														<FormControl>
-															<Switch
-																checked={field.value}
-																onCheckedChange={field.onChange}
-															/>
-														</FormControl>
-													</FormItem>
-												)}
-											/>
-
-											<FormField
-												control={notificationsForm.control}
-												name="marketingEmails"
-												render={({ field }) => (
-													<FormItem className="flex flex-row items-center justify-between p-3 rounded-lg border">
-														<div className="space-y-0.5">
-															<FormLabel className="text-base">
-																Marketing Emails
-															</FormLabel>
-															<FormDescription>
-																Receive emails about new features and promotions
-															</FormDescription>
-														</div>
-														<FormControl>
-															<Switch
-																checked={field.value}
-																onCheckedChange={field.onChange}
-															/>
-														</FormControl>
-													</FormItem>
-												)}
-											/>
-
-											<FormField
-												control={notificationsForm.control}
-												name="newCampaignResults"
-												render={({ field }) => (
-													<FormItem className="flex flex-row items-center justify-between p-3 rounded-lg border">
-														<div className="space-y-0.5">
-															<FormLabel className="text-base">
-																Campaign Results
-															</FormLabel>
-															<FormDescription>
-																Get notified about your campaign performance and metrics
-															</FormDescription>
-														</div>
-														<FormControl>
-															<Switch
-																checked={field.value}
-																onCheckedChange={field.onChange}
-															/>
-														</FormControl>
-													</FormItem>
-												)}
-											/>
-
-											<FormField
-												control={notificationsForm.control}
-												name="accountAlerts"
-												render={({ field }) => (
-													<FormItem className="flex flex-row items-center justify-between p-3 rounded-lg border">
-														<div className="space-y-0.5">
-															<FormLabel className="text-base">Account Alerts</FormLabel>
-															<FormDescription>
-																Receive security and account-related notifications
-															</FormDescription>
-														</div>
-														<FormControl>
-															<Switch
-																checked={field.value}
-																onCheckedChange={field.onChange}
-															/>
-														</FormControl>
-													</FormItem>
-												)}
-											/>
-
-											<div className="flex justify-end">
-												<Button type="submit">Save Preferences</Button>
-											</div>
-										</form>
-									</Form>
-								</CardContent>
-							</Card>
+										) : (
+											<form onSubmit={handleTwitterIntegration} className="space-y-4">
+												<div className="space-y-2">
+													<Label htmlFor="twitter-access-token">Twitter Access Token</Label>
+													<Input
+														id="twitter-access-token"
+														value={twitterAccessToken}
+														onChange={e => setTwitterAccessToken(e.target.value)}
+														placeholder="Enter your Twitter access token"
+														required
+													/>
+												</div>
+												<div className="space-y-2">
+													<Label htmlFor="twitter-access-secret">Twitter Access Secret</Label>
+													<Input
+														id="twitter-access-secret"
+														value={twitterAccessSecret}
+														onChange={e => setTwitterAccessSecret(e.target.value)}
+														placeholder="Enter your Twitter access token secret"
+														required
+													/>
+												</div>
+												<div>
+													<Button type="submit">Connect Twitter</Button>
+												</div>
+											</form>
+										)}
+										<Separator className="my-6" />
+										<div className="text-sm text-muted-foreground">
+											<p className="mb-2">How to get your Twitter API credentials:</p>
+											<ol className="list-decimal pl-4 space-y-1">
+												<li>Go to the Twitter Developer Portal</li>
+												<li>Create a new Project and App</li>
+												<li>Navigate to Keys and Tokens section</li>
+												<li>Generate Access Token and Secret</li>
+											</ol>
+										</div>
+									</CardContent>
+								</Card>
+							</div>
 						</TabsContent>
 					</Tabs>
 				</div>
