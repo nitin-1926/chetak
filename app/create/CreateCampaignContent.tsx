@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -10,16 +10,16 @@ import { Switch } from '@/components/ui/switch';
 import { Card, CardContent } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
-import { Calendar, Edit2, FilePlus, Hash, Image, List, Settings, X } from 'lucide-react';
+import { Calendar, Edit2, FilePlus, Hash, Image, List, Settings, X, Loader2 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import Header from '@/components/Header';
 import ThemeSelector, { Theme } from '@/components/ThemeSelector';
 import ScheduleSelector, { ScheduleOption } from '@/components/ScheduleSelector';
 import PreviewPost from '@/components/PreviewPost';
-import { usePageTransition } from '@/utils/animations';
+import { CampaignAPI } from '@/utils/api';
 
-// Mock themes
-const mockThemes: Theme[] = [
+// Define static data outside the component to avoid re-creation
+const THEME_OPTIONS: Theme[] = [
 	{
 		id: 'tech',
 		name: 'Tech News',
@@ -54,8 +54,8 @@ const mockThemes: Theme[] = [
 	},
 ];
 
-// Mock frequency options
-const frequencyOptions: ScheduleOption[] = [
+// Frequency options defined outside component
+const FREQUENCY_OPTIONS: ScheduleOption[] = [
 	{
 		id: 'hourly',
 		label: 'Hourly',
@@ -82,8 +82,8 @@ const frequencyOptions: ScheduleOption[] = [
 	},
 ];
 
-// Mock preview posts
-const mockPreviews = [
+// Default preview content defined outside component
+const DEFAULT_PREVIEWS = [
 	'The future of AI is not about replacing humans, but enhancing human capabilities. Technology should serve us, not the other way around.',
 	'Introducing our new app that simplifies task management. Boost your productivity with intuitive features and seamless integration.',
 	"5G technology isn't just about faster downloads. It's the foundation for smart cities, autonomous vehicles, and the next wave of innovation.",
@@ -94,7 +94,14 @@ const CreateCampaignContent = () => {
 	const router = useRouter();
 	const searchParams = useSearchParams();
 	const { toast } = useToast();
-	const { animationClass } = usePageTransition();
+
+	// Extract campaign ID once
+	const campaignId = searchParams ? searchParams.get('edit') : null;
+	const isEditMode = !!campaignId;
+
+	// States
+	const [isLoading, setIsLoading] = useState(isEditMode);
+	const [isSaving, setIsSaving] = useState(false);
 
 	// Form state
 	const [activeTab, setActiveTab] = useState('theme');
@@ -110,33 +117,67 @@ const CreateCampaignContent = () => {
 	const [useImages, setUseImages] = useState(false);
 	const [hashtags, setHashtags] = useState<string[]>([]);
 	const [hashtagInput, setHashtagInput] = useState('');
-	const [previewPosts, setPreviewPosts] = useState(mockPreviews);
+	const [previewPosts, setPreviewPosts] = useState(() => [...DEFAULT_PREVIEWS]);
+	const [contentTemplate, setContentTemplate] = useState('');
 
-	const isEditMode = searchParams.has('edit');
+	// Fetch campaign data in edit mode
+	const fetchCampaignData = useCallback(
+		async (id: string) => {
+			setIsLoading(true);
+			try {
+				const campaign = await CampaignAPI.getById(id);
 
-	// Prefill form when in edit mode
+				// Populate form with campaign data
+				setCampaignName(campaign.title);
+				setCampaignDescription(campaign.description || '');
+				setSelectedFrequency(campaign.frequency);
+				setStartDate(new Date(campaign.start_date));
+				setStartTime(campaign.start_time);
+				setEndDate(campaign.end_date ? new Date(campaign.end_date) : undefined);
+				setDuration(campaign.duration || 'ongoing');
+				setContentTemplate(campaign.content_template || '');
+
+				// Extract hashtags from interests
+				if (campaign.interests && campaign.interests.length > 0) {
+					setHashtags(campaign.interests.slice(0, 3));
+				}
+
+				// Generate preview posts based on the template if available
+				if (campaign.content_template) {
+					// In a real implementation, you would use the template to generate new previews
+					// For now, we'll just use the template as the first preview
+					const updatedPreviews = [...DEFAULT_PREVIEWS];
+					updatedPreviews[0] = campaign.content_template;
+					setPreviewPosts(updatedPreviews);
+				}
+			} catch (error) {
+				console.error('Error fetching campaign:', error);
+				toast({
+					title: 'Error',
+					description: 'Failed to load campaign data',
+					variant: 'destructive',
+				});
+			} finally {
+				setIsLoading(false);
+			}
+		},
+		[toast],
+	); // Only include toast in dependencies
+
+	// Only fetch data in edit mode
 	useEffect(() => {
-		if (isEditMode) {
-			// In a real app, fetch campaign data based on ID
-			setCampaignName('Daily Tech Tips');
-			setCampaignDescription('Automated tech tips posted every day');
-			setSelectedTheme('tech');
-			setSelectedFrequency('daily');
-			setStartDate(new Date('2023-09-01'));
-			setStartTime('09:00');
-			setDuration('30d');
-			setUseImages(true);
-			setHashtags(['tech', 'automation', 'tips']);
+		if (isEditMode && campaignId) {
+			fetchCampaignData(campaignId);
 		}
-	}, [isEditMode]);
+	}, [isEditMode, campaignId, fetchCampaignData]);
 
-	const handleNextTab = () => {
+	const handleNextTab = useCallback(() => {
 		if (activeTab === 'theme') {
-			if (!selectedTheme) {
+			if (!campaignName) {
 				toast({
 					variant: 'destructive',
-					title: 'Theme required',
-					description: 'Please select a content theme to continue.',
+					title: 'Campaign name required',
+					description: 'Please enter a name for your campaign.',
 				});
 				return;
 			}
@@ -154,9 +195,9 @@ const CreateCampaignContent = () => {
 		} else if (activeTab === 'settings') {
 			setActiveTab('preview');
 		}
-	};
+	}, [activeTab, campaignName, startDate, toast]);
 
-	const handlePreviousTab = () => {
+	const handlePreviousTab = useCallback(() => {
 		if (activeTab === 'schedule') {
 			setActiveTab('theme');
 		} else if (activeTab === 'settings') {
@@ -164,52 +205,149 @@ const CreateCampaignContent = () => {
 		} else if (activeTab === 'preview') {
 			setActiveTab('settings');
 		}
-	};
+	}, [activeTab]);
 
-	const handleAddHashtag = () => {
-		if (hashtagInput && !hashtags.includes(hashtagInput) && hashtags.length < 3) {
-			setHashtags([...hashtags, hashtagInput]);
-			setHashtagInput('');
-		} else if (hashtags.length >= 3) {
-			toast({
-				variant: 'destructive',
-				title: 'Hashtag limit reached',
-				description: 'You can only add up to 3 hashtags.',
+	const handleAddHashtag = useCallback(() => {
+		if (hashtagInput && hashtagInput.trim() !== '') {
+			setHashtags(prevHashtags => {
+				if (!prevHashtags.includes(hashtagInput) && prevHashtags.length < 3) {
+					return [...prevHashtags, hashtagInput];
+				}
+				if (prevHashtags.length >= 3) {
+					toast({
+						variant: 'destructive',
+						title: 'Hashtag limit reached',
+						description: 'You can only add up to 3 hashtags.',
+					});
+				}
+				return prevHashtags;
 			});
+			setHashtagInput('');
 		}
-	};
+	}, [hashtagInput, toast]);
 
-	const handleRemoveHashtag = (tag: string) => {
-		setHashtags(hashtags.filter(t => t !== tag));
-	};
+	const handleRemoveHashtag = useCallback((tag: string) => {
+		setHashtags(prevHashtags => prevHashtags.filter(t => t !== tag));
+	}, []);
 
-	const handleUpdatePreview = (index: number, content: string) => {
-		const updatedPreviews = [...previewPosts];
-		updatedPreviews[index] = content;
-		setPreviewPosts(updatedPreviews);
-	};
-
-	const handleCreateCampaign = () => {
-		// In a real app, this would send the data to the server
-		toast({
-			title: isEditMode ? 'Campaign Updated' : 'Campaign Created',
-			description: isEditMode
-				? 'Your campaign has been updated successfully.'
-				: 'Your new campaign has been created and scheduled.',
+	const handleUpdatePreview = useCallback((index: number, content: string) => {
+		setPreviewPosts(prevPosts => {
+			const updatedPreviews = [...prevPosts];
+			updatedPreviews[index] = content;
+			return updatedPreviews;
 		});
 
-		setTimeout(() => router.push('/dashboard'), 1000);
-	};
+		if (index === 0) {
+			setContentTemplate(content);
+		}
+	}, []);
 
-	const isFormValid = () => {
-		return campaignName && selectedTheme && (selectedTheme !== 'custom' || customTheme) && startDate;
-	};
+	const isFormValid = useCallback(() => {
+		if (!campaignName) {
+			toast({
+				variant: 'destructive',
+				title: 'Campaign name required',
+				description: 'Please enter a name for your campaign.',
+			});
+			return false;
+		}
+
+		if (!startDate) {
+			toast({
+				variant: 'destructive',
+				title: 'Start date required',
+				description: 'Please select a start date for your campaign.',
+			});
+			return false;
+		}
+
+		if (!previewPosts[0]) {
+			toast({
+				variant: 'destructive',
+				title: 'Content required',
+				description: 'Please provide content for your campaign.',
+			});
+			return false;
+		}
+
+		return true;
+	}, [campaignName, startDate, previewPosts, toast]);
+
+	const handleCreateCampaign = useCallback(async () => {
+		if (!isFormValid()) return;
+
+		setIsSaving(true);
+
+		try {
+			const campaignData = {
+				title: campaignName,
+				description: campaignDescription,
+				status: 'draft' as const,
+				frequency: selectedFrequency,
+				startDate: startDate?.toISOString(),
+				startTime: startTime,
+				endDate: endDate?.toISOString() || null,
+				duration: duration,
+				timezone: 'UTC' as const,
+				customDays: [],
+				customTimes: [],
+				interests: hashtags,
+				languages: ['en'],
+				locations: [],
+				ageRange: null,
+				gender: [],
+				contentTemplate: previewPosts[0] || '',
+			};
+
+			if (isEditMode && campaignId) {
+				// Update existing campaign
+				await CampaignAPI.update(campaignId, campaignData);
+			} else {
+				// Create new campaign
+				await CampaignAPI.create(campaignData);
+			}
+
+			toast({
+				title: isEditMode ? 'Campaign Updated' : 'Campaign Created',
+				description: isEditMode
+					? 'Your campaign has been updated successfully.'
+					: 'Your new campaign has been created and scheduled.',
+			});
+
+			// Navigate back to dashboard
+			router.push('/dashboard');
+		} catch (error) {
+			console.error('Error saving campaign:', error);
+			toast({
+				title: 'Error',
+				description: `Failed to ${isEditMode ? 'update' : 'create'} campaign. Please try again.`,
+				variant: 'destructive',
+			});
+		} finally {
+			setIsSaving(false);
+		}
+	}, [
+		isFormValid,
+		campaignName,
+		campaignDescription,
+		selectedFrequency,
+		startDate,
+		startTime,
+		endDate,
+		duration,
+		hashtags,
+		previewPosts,
+		isEditMode,
+		campaignId,
+		toast,
+		router,
+	]);
 
 	return (
 		<div className="min-h-screen flex flex-col">
 			<Header />
 
-			<main className={`flex-1 pt-24 pb-12 px-4 sm:px-6 lg:px-8 ${animationClass}`}>
+			<main className="flex-1 pt-24 pb-12 px-4 sm:px-6 lg:px-8">
 				<div className="max-w-4xl mx-auto">
 					<div className="mb-8">
 						<h1 className="text-3xl font-bold">{isEditMode ? 'Edit Campaign' : 'Create New Campaign'}</h1>
@@ -274,7 +412,7 @@ const CreateCampaignContent = () => {
 								</p>
 
 								<ThemeSelector
-									themes={mockThemes}
+									themes={THEME_OPTIONS}
 									selectedThemeId={selectedTheme}
 									onSelectTheme={setSelectedTheme}
 								/>
@@ -305,7 +443,7 @@ const CreateCampaignContent = () => {
 								</p>
 
 								<ScheduleSelector
-									frequencyOptions={frequencyOptions}
+									frequencyOptions={FREQUENCY_OPTIONS}
 									selectedFrequency={selectedFrequency}
 									onSelectFrequency={setSelectedFrequency}
 									startDate={startDate}
@@ -467,4 +605,7 @@ const CreateCampaignContent = () => {
 	);
 };
 
-export default CreateCampaignContent;
+export default React.memo(CreateCampaignContent, (prevProps, nextProps) => {
+	// Always return true to prevent re-renders from props
+	return true;
+});

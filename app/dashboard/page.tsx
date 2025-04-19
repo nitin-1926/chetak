@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -8,109 +8,121 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
 import Header from '@/components/Header';
 import CampaignCard, { CampaignStatus } from '@/components/CampaignCard';
-import { Plus } from 'lucide-react';
+import { Plus, Loader2 } from 'lucide-react';
 import { usePageTransition } from '@/utils/animations';
-
-// Mock campaign data
-const mockCampaigns = [
-	{
-		id: '1',
-		title: 'Daily Tech Tips',
-		description: 'Automated tech tips posted every day',
-		status: 'active' as CampaignStatus,
-		theme: 'Tech News',
-		frequency: 'Daily',
-		postsCount: 30,
-		startDate: '2023-09-01',
-		endDate: '2023-10-01',
-	},
-	{
-		id: '2',
-		title: 'Motivational Quotes',
-		description: 'Inspirational quotes for followers',
-		status: 'paused' as CampaignStatus,
-		theme: 'Motivation',
-		frequency: 'Every 12 hours',
-		postsCount: 45,
-		startDate: '2023-08-15',
-	},
-	{
-		id: '3',
-		title: 'Industry Insights',
-		description: 'Latest trends and analysis',
-		status: 'completed' as CampaignStatus,
-		theme: 'Business',
-		frequency: 'Weekly',
-		postsCount: 8,
-		startDate: '2023-07-10',
-		endDate: '2023-09-01',
-	},
-	{
-		id: '4',
-		title: 'Random Facts',
-		description: 'Interesting facts about the world',
-		status: 'draft' as CampaignStatus,
-		theme: 'Random Facts',
-		frequency: 'Every 2 days',
-		postsCount: 0,
-		startDate: '2023-09-10',
-	},
-];
+import { CampaignAPI } from '@/utils/api';
+import { Campaign as CampaignType } from '@/types/api';
+import DebugDisplay from '@/components/DebugDisplay';
 
 export default function DashboardPage() {
 	const router = useRouter();
 	const { toast } = useToast();
 	const { animationClass } = usePageTransition();
-	const [campaigns, setCampaigns] = useState(mockCampaigns);
+	const [campaigns, setCampaigns] = useState<CampaignType[]>([]);
 	const [selectedFilter, setSelectedFilter] = useState('all');
+	const [isLoading, setIsLoading] = useState(true);
+	const [error, setError] = useState<string | null>(null);
+
+	// Use useCallback to prevent recreating this function on every render
+	const fetchCampaigns = useCallback(async () => {
+		setIsLoading(true);
+		setError(null);
+		try {
+			const data = await CampaignAPI.getAll();
+			setCampaigns(data);
+		} catch (err) {
+			console.error('Error fetching campaigns:', err);
+			setError('Failed to load your campaigns. Please try again.');
+			toast({
+				title: 'Error',
+				description: 'Failed to load your campaigns. Please try again.',
+				variant: 'destructive',
+			});
+		} finally {
+			setIsLoading(false);
+		}
+	}, [toast]);
+
+	useEffect(() => {
+		fetchCampaigns();
+	}, [fetchCampaigns]);
 
 	const handleCreateCampaign = () => {
 		router.push('/create');
 	};
 
 	const handleEditCampaign = (id: string) => {
-		toast({
-			title: 'Edit Campaign',
-			description: `Editing campaign with ID: ${id}`,
-		});
 		router.push(`/create?edit=${id}`);
 	};
 
-	const handleDeleteCampaign = (id: string) => {
-		// In a real app, you'd show a confirmation dialog first
-		toast({
-			title: 'Campaign Deleted',
-			description: 'The campaign has been deleted successfully.',
-		});
-		setCampaigns(campaigns.filter(campaign => campaign.id !== id));
+	const handleDeleteCampaign = async (id: string) => {
+		try {
+			await CampaignAPI.delete(id);
+
+			toast({
+				title: 'Campaign Deleted',
+				description: 'The campaign has been deleted successfully.',
+			});
+
+			// Remove the deleted campaign from state
+			setCampaigns(prevCampaigns => prevCampaigns.filter(campaign => campaign.id !== id));
+		} catch (err) {
+			console.error('Error deleting campaign:', err);
+			toast({
+				title: 'Error',
+				description: 'Failed to delete the campaign. Please try again.',
+				variant: 'destructive',
+			});
+		}
 	};
 
-	const handleStatusChange = (id: string, newStatus: CampaignStatus) => {
-		setCampaigns(campaigns.map(campaign => (campaign.id === id ? { ...campaign, status: newStatus } : campaign)));
+	const handleStatusChange = async (id: string, newStatus: CampaignStatus) => {
+		try {
+			const campaign = campaigns.find(c => c.id === id);
+			if (!campaign) return;
 
-		toast({
-			title: `Campaign ${newStatus === 'active' ? 'Activated' : 'Paused'}`,
-			description: `Campaign status changed to ${newStatus}.`,
-		});
+			await CampaignAPI.update(id, {
+				...campaign,
+				status: newStatus,
+			});
+
+			// Update local state using functional update to avoid stale closures
+			setCampaigns(prevCampaigns =>
+				prevCampaigns.map(campaign => (campaign.id === id ? { ...campaign, status: newStatus } : campaign)),
+			);
+
+			toast({
+				title: `Campaign ${newStatus === 'active' ? 'Activated' : 'Paused'}`,
+				description: `Campaign status changed to ${newStatus}.`,
+			});
+		} catch (err) {
+			console.error('Error updating campaign status:', err);
+			toast({
+				title: 'Error',
+				description: 'Failed to update the campaign status. Please try again.',
+				variant: 'destructive',
+			});
+		}
 	};
 
-	const filteredCampaigns = campaigns.filter(campaign => {
-		if (selectedFilter === 'all') return true;
-		return campaign.status === selectedFilter;
-	});
+	// Use memoized filteredCampaigns to prevent recalculation on each render
+	const filteredCampaigns = React.useMemo(() => {
+		return campaigns.filter(campaign => {
+			if (selectedFilter === 'all') return true;
+			return campaign.status === selectedFilter;
+		});
+	}, [campaigns, selectedFilter]);
 
-	const getStatusCounts = () => {
-		const counts = {
+	// Use memoized statusCounts to prevent recalculation on each render
+	const statusCounts = React.useMemo(() => {
+		return {
 			all: campaigns.length,
 			active: campaigns.filter(c => c.status === 'active').length,
 			paused: campaigns.filter(c => c.status === 'paused').length,
 			completed: campaigns.filter(c => c.status === 'completed').length,
 			draft: campaigns.filter(c => c.status === 'draft').length,
 		};
-		return counts;
-	};
-
-	const statusCounts = getStatusCounts();
+	}, [campaigns]);
 
 	return (
 		<div className="min-h-screen flex flex-col">
@@ -129,78 +141,118 @@ export default function DashboardPage() {
 						</Button>
 					</div>
 
-					{/* Stats Overview */}
-					<div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
-						{[
-							{ title: 'Total Campaigns', value: statusCounts.all, color: 'bg-blue-500' },
-							{ title: 'Active', value: statusCounts.active, color: 'bg-green-500' },
-							{ title: 'Paused', value: statusCounts.paused, color: 'bg-yellow-500' },
-							{ title: 'Completed', value: statusCounts.completed, color: 'bg-gray-500' },
-						].map((stat, index) => (
-							<Card key={index}>
-								<CardContent className="p-6">
-									<div className="flex items-center space-x-4">
-										<div
-											className={`w-12 h-12 rounded-full ${stat.color} bg-opacity-10 flex items-center justify-center`}
-										>
-											<div className={`w-6 h-6 rounded-full ${stat.color}`}></div>
-										</div>
-										<div>
-											<p className="text-sm font-medium text-muted-foreground">{stat.title}</p>
-											<p className="text-3xl font-bold">{stat.value}</p>
-										</div>
-									</div>
+					{isLoading ? (
+						<div className="flex flex-col items-center justify-center py-20">
+							<Loader2 className="h-12 w-12 animate-spin text-primary mb-4" />
+							<p className="text-xl font-medium">Loading campaigns...</p>
+							<p className="text-muted-foreground">Please wait while we fetch your data</p>
+						</div>
+					) : error ? (
+						<div className="py-20 text-center">
+							<p className="text-muted-foreground mb-4">{error}</p>
+							<Button onClick={fetchCampaigns}>Retry</Button>
+						</div>
+					) : (
+						<>
+							{/* Stats Overview */}
+							<div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
+								{[
+									{ title: 'Total Campaigns', value: statusCounts.all, color: 'bg-blue-500' },
+									{ title: 'Active', value: statusCounts.active, color: 'bg-green-500' },
+									{ title: 'Paused', value: statusCounts.paused, color: 'bg-yellow-500' },
+									{ title: 'Completed', value: statusCounts.completed, color: 'bg-gray-500' },
+								].map((stat, index) => (
+									<Card key={index}>
+										<CardContent className="p-6">
+											<div className="flex items-center space-x-4">
+												<div
+													className={`w-12 h-12 rounded-full ${stat.color} bg-opacity-10 flex items-center justify-center`}
+												>
+													<div className={`w-6 h-6 rounded-full ${stat.color}`}></div>
+												</div>
+												<div>
+													<p className="text-sm font-medium text-muted-foreground">
+														{stat.title}
+													</p>
+													<p className="text-3xl font-bold">{stat.value}</p>
+												</div>
+											</div>
+										</CardContent>
+									</Card>
+								))}
+							</div>
+
+							{/* Campaign Listing */}
+							<Card>
+								<CardHeader>
+									<CardTitle>Your Campaigns</CardTitle>
+									<CardDescription>
+										View and manage your X content automation campaigns
+									</CardDescription>
+								</CardHeader>
+								<CardContent>
+									<Tabs defaultValue="all" value={selectedFilter} onValueChange={setSelectedFilter}>
+										<TabsList className="mb-4">
+											<TabsTrigger value="all">All ({statusCounts.all})</TabsTrigger>
+											<TabsTrigger value="active">Active ({statusCounts.active})</TabsTrigger>
+											<TabsTrigger value="paused">Paused ({statusCounts.paused})</TabsTrigger>
+											<TabsTrigger value="completed">
+												Completed ({statusCounts.completed})
+											</TabsTrigger>
+											<TabsTrigger value="draft">Drafts ({statusCounts.draft})</TabsTrigger>
+										</TabsList>
+
+										<TabsContent value={selectedFilter} className="mt-0">
+											{filteredCampaigns.length > 0 ? (
+												<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+													{filteredCampaigns.map(campaign => (
+														<CampaignCard
+															key={campaign.id}
+															id={campaign.id}
+															title={campaign.title}
+															description={campaign.description || ''}
+															status={campaign.status as CampaignStatus}
+															theme={campaign.frequency} // Using frequency as theme for display
+															frequency={campaign.frequency}
+															postsCount={campaign.posts_count}
+															startDate={
+																new Date(campaign.start_date)
+																	.toISOString()
+																	.split('T')[0]
+															}
+															endDate={
+																campaign.end_date
+																	? new Date(campaign.end_date)
+																			.toISOString()
+																			.split('T')[0]
+																	: undefined
+															}
+															onEdit={handleEditCampaign}
+															onDelete={handleDeleteCampaign}
+															onStatusChange={handleStatusChange}
+														/>
+													))}
+												</div>
+											) : (
+												<div className="py-12 text-center">
+													<p className="text-muted-foreground mb-4">
+														No campaigns found with this status.
+													</p>
+													<Button onClick={handleCreateCampaign}>
+														<Plus className="mr-2 h-4 w-4" />
+														Create Your First Campaign
+													</Button>
+												</div>
+											)}
+										</TabsContent>
+									</Tabs>
 								</CardContent>
 							</Card>
-						))}
-					</div>
-
-					{/* Campaign Listing */}
-					<Card>
-						<CardHeader>
-							<CardTitle>Your Campaigns</CardTitle>
-							<CardDescription>View and manage your X content automation campaigns</CardDescription>
-						</CardHeader>
-						<CardContent>
-							<Tabs defaultValue="all" value={selectedFilter} onValueChange={setSelectedFilter}>
-								<TabsList className="mb-4">
-									<TabsTrigger value="all">All ({statusCounts.all})</TabsTrigger>
-									<TabsTrigger value="active">Active ({statusCounts.active})</TabsTrigger>
-									<TabsTrigger value="paused">Paused ({statusCounts.paused})</TabsTrigger>
-									<TabsTrigger value="completed">Completed ({statusCounts.completed})</TabsTrigger>
-									<TabsTrigger value="draft">Drafts ({statusCounts.draft})</TabsTrigger>
-								</TabsList>
-
-								<TabsContent value={selectedFilter} className="mt-0">
-									{filteredCampaigns.length > 0 ? (
-										<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-											{filteredCampaigns.map(campaign => (
-												<CampaignCard
-													key={campaign.id}
-													{...campaign}
-													onEdit={handleEditCampaign}
-													onDelete={handleDeleteCampaign}
-													onStatusChange={handleStatusChange}
-												/>
-											))}
-										</div>
-									) : (
-										<div className="py-12 text-center">
-											<p className="text-muted-foreground mb-4">
-												No campaigns found with this status.
-											</p>
-											<Button onClick={handleCreateCampaign}>
-												<Plus className="mr-2 h-4 w-4" />
-												Create Your First Campaign
-											</Button>
-										</div>
-									)}
-								</TabsContent>
-							</Tabs>
-						</CardContent>
-					</Card>
+						</>
+					)}
 				</div>
 			</main>
+			<DebugDisplay />
 		</div>
 	);
 }

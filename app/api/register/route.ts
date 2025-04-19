@@ -1,7 +1,7 @@
 import { hash } from 'bcrypt';
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
-import { db } from '@/lib/db'; // Import the unified db client
+import { prisma } from '@/lib/db'; // Import the prisma client
 
 // Define a schema for input validation
 const userSchema = z.object({
@@ -16,7 +16,7 @@ export async function POST(req: Request) {
 		const { name, email, password } = userSchema.parse(body);
 
 		// Check if user already exists
-		const existingUserByEmail = await db.user.findUnique({
+		const existingUserByEmail = await prisma.user.findUnique({
 			where: { email },
 		});
 
@@ -28,7 +28,7 @@ export async function POST(req: Request) {
 		const hashedPassword = await hash(password, 10);
 
 		// Create the user
-		const user = await db.user.create({
+		const user = await prisma.user.create({
 			data: {
 				name,
 				email,

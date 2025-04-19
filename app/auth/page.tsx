@@ -39,6 +39,22 @@ export default function AuthPage() {
 
 		try {
 			setIsLoading(true);
+
+			// Add test user for development
+			if (process.env.NODE_ENV === 'development' && email === 'test@example.com') {
+				try {
+					await axios.post('/api/register', {
+						name: 'Test User',
+						email: 'test@example.com',
+						password: 'password123',
+					});
+					console.log('Created test user automatically');
+				} catch (err) {
+					// Ignore error if user already exists (409)
+					console.log('Test user may already exist');
+				}
+			}
+
 			const result = await signIn('credentials', {
 				email,
 				password,
@@ -46,7 +62,13 @@ export default function AuthPage() {
 			});
 
 			if (result?.error) {
-				throw new Error(result.error);
+				console.error('Sign-in error details:', result.error);
+
+				if (result.error === 'CredentialsSignin') {
+					throw new Error('Invalid email or password');
+				} else {
+					throw new Error(result.error);
+				}
 			}
 
 			toast({

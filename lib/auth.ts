@@ -2,10 +2,10 @@ import { PrismaAdapter } from '@auth/prisma-adapter';
 import { NextAuthOptions } from 'next-auth';
 import { compare } from 'bcrypt';
 import CredentialsProvider from 'next-auth/providers/credentials';
-import { db } from './db'; // Use the unified db client
+import { prisma } from './db'; // Use the unified prisma client
 
 export const authOptions: NextAuthOptions = {
-	adapter: PrismaAdapter(db),
+	adapter: PrismaAdapter(prisma),
 	secret: process.env.NEXTAUTH_SECRET,
 	session: {
 		strategy: 'jwt',
@@ -25,7 +25,7 @@ export const authOptions: NextAuthOptions = {
 					return null;
 				}
 
-				const user = await db.user.findUnique({
+				const user = await prisma.user.findUnique({
 					where: {
 						email: credentials.email,
 					},
