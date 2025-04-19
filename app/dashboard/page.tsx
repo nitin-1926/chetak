@@ -1,18 +1,17 @@
 'use client';
 
-import React, { useState, useEffect, useCallback } from 'react';
-import { useRouter } from 'next/navigation';
+import CampaignCard, { CampaignStatus } from '@/components/CampaignCard';
+import Header from '@/components/Header';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
-import Header from '@/components/Header';
-import CampaignCard, { CampaignStatus } from '@/components/CampaignCard';
-import { Plus, Loader2 } from 'lucide-react';
+import { Campaign as CampaignType } from '@/types/api';
 import { usePageTransition } from '@/utils/animations';
 import { CampaignAPI } from '@/utils/api';
-import { Campaign as CampaignType } from '@/types/api';
-import DebugDisplay from '@/components/DebugDisplay';
+import { Loader2, Plus } from 'lucide-react';
+import { useRouter } from 'next/navigation';
+import React, { useCallback, useEffect, useState } from 'react';
 
 export default function DashboardPage() {
 	const router = useRouter();
@@ -252,7 +251,6 @@ export default function DashboardPage() {
 					)}
 				</div>
 			</main>
-			<DebugDisplay />
 		</div>
 	);
 }
